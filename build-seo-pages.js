@@ -38,9 +38,19 @@ for (const row of data) {
   generated++;
 }
 
+const buildDate = new Date().toISOString().slice(0, 10);
 const urls = [`${SITE}/`, ...data.map(row => `${SITE}/resources/${encodeURIComponent(row.seoSlug)}/`)];
-const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(url => `  <url><loc>${esc(url)}</loc></url>`).join('\n')}\n</urlset>\n`;
-fs.writeFileSync(path.join(ROOT, 'sitemap.xml'), xml);
+const pageXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(url => `  <url><loc>${esc(url)}</loc><lastmod>${buildDate}</lastmod></url>`).join('\n')}\n</urlset>\n`;
+const imageRows = data.filter(row => row.image);
+const imageXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${imageRows.map(row => {
+  const pageUrl = `${SITE}/resources/${encodeURIComponent(row.seoSlug)}/`;
+  const imageUrl = `${SITE}/assets/images/${encodeURIComponent(row.image)}`;
+  return `  <url><loc>${esc(pageUrl)}</loc><lastmod>${buildDate}</lastmod><image:image><image:loc>${esc(imageUrl)}</image:loc><image:title>${esc(row.title)}</image:title></image:image></url>`;
+}).join('\n')}\n</urlset>\n`;
+const sitemapIndex = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <sitemap><loc>${SITE}/pages-sitemap.xml</loc><lastmod>${buildDate}</lastmod></sitemap>\n  <sitemap><loc>${SITE}/images-sitemap.xml</loc><lastmod>${buildDate}</lastmod></sitemap>\n</sitemapindex>\n`;
+fs.writeFileSync(path.join(ROOT, 'pages-sitemap.xml'), pageXml);
+fs.writeFileSync(path.join(ROOT, 'images-sitemap.xml'), imageXml);
+fs.writeFileSync(path.join(ROOT, 'sitemap.xml'), sitemapIndex);
 fs.writeFileSync(path.join(ROOT, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap: ${SITE}/sitemap.xml\n`);
 fs.writeFileSync(path.join(ROOT, 'data.json'), JSON.stringify(data));
-console.log(JSON.stringify({ generatedPages: generated, sitemapUrls: urls.length, sitemap: 'sitemap.xml', robots: 'robots.txt' }));
+console.log(JSON.stringify({ generatedPages: generated, pageUrls: urls.length, imageUrls: imageRows.length, sitemapIndexEntries: 2, sitemaps: ['sitemap.xml', 'pages-sitemap.xml', 'images-sitemap.xml'], robots: 'robots.txt' }));
